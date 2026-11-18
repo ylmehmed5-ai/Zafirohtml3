@@ -1,0 +1,47 @@
+name: Evrensel Otomatik APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Depoyu Cek
+      uses: actions/checkout@v4
+
+    - name: Zip Dosyasini Otomatik Bul ve Cikart
+      run: |
+        ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+        if [ -z "$ZIP_FILE" ]; then
+          echo "HATA: Depoda hicbir .zip dosyasi bulunamadi!"
+          exit 1
+        fi
+        echo "Bulunan dosya: $ZIP_FILE"
+        unzip -q "$ZIP_FILE" -d proje_klasoru
+
+    - name: Python 3.11 Kur (Chaquopy Destegi)
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Java JDK 17 Kur
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Projeyi Bul ve APK Derle
+      run: |
+        GRADLE_DIR=$(find proje_klasoru -name "gradlew" -exec dirname {} \; | head -n 1)
+        cd "$GRADLE_DIR"
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: APK Dosyasini Paketle
+      uses: actions/upload-artifact@v4
+      with:
+        name: Hazir-Uygulama-APK
+        path: proje_klasoru/**/build/outputs/apk/debug/*.apk
